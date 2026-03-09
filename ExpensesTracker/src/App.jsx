@@ -1,24 +1,47 @@
-import './App.css'
 import { useState } from 'react';
-import Transaction from './components/Transaction'
+import TransactionForm from './components/Transactions/TransactionForm';
+import TransactionList from './components/Transactions/TransactionList';
 import Categories from './components/Categories';
 
 function App() {
-  const [categories, setCategories] = useState([
-  "Food",
-  "Entertainment",
-  "Subscriptions",
-  "Taxes"
+
+  const [expenseCategories, setExpenseCategories] = useState([
+    "Transportation",
+    "Alimentation",
+    "Factures",
+    "Loisirs"
   ]);
+
+  const [incomeCategories, setIncomeCategories] = useState([
+    "Salaire",
+    "Freelance",
+    "Cadeau"
+  ]);
+
+  // ✅ Declare transactions state first
+  const [transactions, setTransactions] = useState([]);
+
+  // Now you can safely use it
+  const addTransaction = (transaction) => {
+    setTransactions(prev => [...prev, transaction]);
+  };
 
   return (
     <>
-    <Transaction categories={categories} />
-    <Categories
-  categories={categories}
-  setCategories={setCategories}/>
+      <TransactionForm
+        expenseCategories={expenseCategories}
+        incomeCategories={incomeCategories}
+        addTransaction={addTransaction} 
+      />
+
+      <TransactionList transactions={transactions} />
+
+      <Categories
+        categories={expenseCategories}
+        setCategories={setExpenseCategories}
+      />
     </>
-  )
+  );
 }
 
-export default App
+export default App;
