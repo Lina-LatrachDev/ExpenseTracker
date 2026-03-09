@@ -26,6 +26,10 @@ function App() {
     setTransactions(prev => [...prev, transaction]);
   };
 
+  const deleteTransaction = (id) => {
+    setTransactions(prev => prev.filter(tr => tr.id !== id));
+  };
+
   return (
     <>
       <TransactionForm
@@ -34,7 +38,10 @@ function App() {
         addTransaction={addTransaction} 
       />
 
-      <TransactionList transactions={transactions} />
+      <TransactionList 
+        transactions={transactions} 
+        deleteTransaction={deleteTransaction}
+      />
 
       <Categories
         categories={expenseCategories}
