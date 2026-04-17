@@ -1,7 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from "react";
+import { useTransaction } from "../../context/TransactionContext";
+import { useCategory } from "../../context/CategoryContext";
 
-export default function TransactionForm({ expenseCategories, incomeCategories, addTransaction }) {
-
+export default function TransactionForm({
+  //categories,
+  //addTransaction,
+  editingTransaction
+}) {
+  
   const now = new Date().toISOString().slice(0, 16);
 
   const [transaction, setTransaction] = useState({
@@ -10,140 +16,242 @@ export default function TransactionForm({ expenseCategories, incomeCategories, a
     type: "expense",
     montant: "",
     categorie: "",
-    date: now
+    date: now,
+    taxType: "TTC",
+    tvaRate: 0.2,
   });
 
-  // Categories dynamiques
-    const categories = transaction.type === "income" ? incomeCategories : expenseCategories;
+  const { categories } = useCategory();
+  
+  const { addTransaction, updateTransaction } = useTransaction();
+  
+  // ✅ TVA CALC STATE
+  const [calc, setCalc] = useState({
+    HT: null,
+    TVA: null,
+    TTC: null,
+  });
 
-    const handleChange = (e) => {
+  // ✅ Prefill when editing
+  useEffect(() => {
+    if (editingTransaction) {
+      setTransaction({
+        ...editingTransaction,
+        montant: editingTransaction.montant,
+        categorie: editingTransaction.categorie,
+        date: editingTransaction.date.slice(0, 16),
+        taxType: editingTransaction.taxType || "TTC",
+        tvaRate: editingTransaction.tvaRate || 0.2,
+      });
+    }
+  }, [editingTransaction]);
+
+  // ✅ LIVE TVA CALCULATION
+  useEffect(() => {
+    const montant = Number(transaction.montant);
+    const rate = Number(transaction.tvaRate);
+
+    if (!montant) {
+      setCalc({ HT: null, TVA: null, TTC: null });
+      return;
+    }
+
+    let HT, TTC, TVA;
+
+    if (transaction.taxType === "TTC") {
+      TTC = montant;
+      HT = TTC / (1 + rate);
+    } else {
+      HT = montant;
+      TTC = HT * (1 + rate);
+    }
+
+    TVA = TTC - HT;
+
+    setCalc({ HT, TVA, TTC });
+  }, [transaction.montant, transaction.taxType, transaction.tvaRate]);
+
+  const filteredCategories = categories.filter(
+    (cat) => cat.type === transaction.type
+  );
+
+  const handleChange = (e) => {
     const { name, value } = e.target;
+
     setTransaction((prev) => ({
       ...prev,
       [name]: value,
-      ...(name === "type" && { categorie: "" }) // reset
+      ...(name === "type" && { categorie: "" }),
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    
-    const newTransaction = {
-      ...transaction,
-      id: Date.now() // générer l'ID
-    };
+  if (!transaction.nom || !transaction.montant || !transaction.categorie) {
+    return;
+  }
 
-    addTransaction(newTransaction); 
+  const payload = {
+    nom: transaction.nom,
+    type: transaction.type,
+    montant: Number(transaction.montant),
+    categorie: transaction.categorie,
+    date: transaction.date,
+  };
 
-    // Reset
+  try {
+    if (editingTransaction) {
+      await updateTransaction(editingTransaction.id, payload);
+    } else {
+      await addTransaction(payload);
+    }
+
+    // reset
     setTransaction({
       id: "",
-      type: "expense",
       nom: "",
+      type: "expense",
       montant: "",
       categorie: "",
-      date: now
+      date: now,
+      taxType: "TTC",
+      tvaRate: 0.2,
     });
-  };
-  
-return (
-  <div className="bg-white p-5 rounded-xl shadow-sm max-w-md">
 
-    <h2 className="text-lg font-semibold mb-4">
-      Ajouter Transaction
-    </h2>
+    setCalc({ HT: null, TVA: null, TTC: null });
 
-    <form onSubmit={handleSubmit} className="space-y-4">
+  } catch (err) {
+    console.error(err);
+  }
+};
 
-      {/* Type Toggle */}
-      <div className="flex bg-gray-100 rounded-lg p-1 w-fit">
+  return (
+    <div className="w-[420px] bg-white p-6 rounded-2xl shadow-xl">
+      <h2 className="text-xl font-semibold mb-5">
+        {editingTransaction ? "Modifier Transaction" : "Nouvelle Transaction"}
+      </h2>
 
-        <label className={`px-4 py-1 rounded-md cursor-pointer text-sm font-medium transition 
-          ${transaction.type === "expense" ? "bg-red-500 text-white" : "text-gray-600"}
-        `}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+
+        {/* TYPE */}
+        <div className="flex bg-zinc-100 rounded-lg p-1 w-fit">
+          <label className={`px-4 py-1 rounded-md cursor-pointer text-sm font-medium transition
+          ${transaction.type === "expense" ? "bg-red-500 text-white" : "text-zinc-600"}`}>
+            <input
+              type="radio"
+              name="type"
+              value="expense"
+              checked={transaction.type === "expense"}
+              onChange={handleChange}
+              className="hidden"
+            />
+            Dépenses
+          </label>
+
+          <label className={`px-4 py-1 rounded-md cursor-pointer text-sm font-medium transition
+          ${transaction.type === "income" ? "bg-green-500 text-white" : "text-zinc-600"}`}>
+            <input
+              type="radio"
+              name="type"
+              value="income"
+              checked={transaction.type === "income"}
+              onChange={handleChange}
+              className="hidden"
+            />
+            Revenu
+          </label>
+        </div>
+
+        {/* NAME + AMOUNT */}
+        <div className="grid grid-cols-2 gap-3">
           <input
-            type="radio"
-            name="type"
-            value="expense"
-            checked={transaction.type === "expense"}
+            type="text"
+            name="nom"
+            placeholder="Nom"
+            value={transaction.nom}
             onChange={handleChange}
-            className="hidden"
+            className="border rounded-lg px-3 py-2 text-sm"
           />
-          Dépense
-        </label>
 
-        <label className={`px-4 py-1 rounded-md cursor-pointer text-sm font-medium transition 
-          ${transaction.type === "income" ? "bg-green-500 text-white" : "text-gray-600"}
-        `}>
           <input
-            type="radio"
-            name="type"
-            value="income"
-            checked={transaction.type === "income"}
+            type="number"
+            name="montant"
+            placeholder="Montant"
+            value={transaction.montant}
             onChange={handleChange}
-            className="hidden"
+            className="border rounded-lg px-3 py-2 text-sm"
           />
-          Revenu
-        </label>
+        </div>
 
-      </div>
+        {/* TAX OPTIONS */}
+        <div className="grid grid-cols-2 gap-3">
+          <select
+            name="taxType"
+            value={transaction.taxType}
+            onChange={handleChange}
+            className="border rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="TTC">TTC</option>
+            <option value="HT">HT</option>
+          </select>
 
+          <select
+            name="tvaRate"
+            value={transaction.tvaRate}
+            onChange={handleChange}
+            className="border rounded-lg px-3 py-2 text-sm"
+          >
+            <option value={0.2}>TVA 20%</option>
+            <option value={0.14}>TVA 14%</option>
+            <option value={0.1}>TVA 10%</option>
+          </select>
+        </div>
 
-      <div className="grid grid-cols-2 gap-3">
+        {/* ✅ TVA RESULT DISPLAY */}
+        <div className="bg-stone-50 p-3 rounded-lg text-sm space-y-1">
+          <p className="text-xs text-gray-400">Calcul automatique TVA</p>
+          <p>HT: {calc.HT ? calc.HT.toFixed(2) : "-"}</p>
+          <p>TVA: {calc.TVA ? calc.TVA.toFixed(2) : "-"}</p>
+          <p className="font-semibold">
+            TTC: {calc.TTC ? calc.TTC.toFixed(2) : "-"}
+          </p>
+        </div>
 
-        <input
-          type="text"
-          name="nom"
-          placeholder="Nom"
-          value={transaction.nom}
-          onChange={handleChange}
-          className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
+        {/* CATEGORY + DATE */}
+        <div className="grid grid-cols-2 gap-3">
+          <select
+            name="categorie"
+            value={transaction.categorie}
+            onChange={handleChange}
+            className="border rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="">Categorie</option>
 
-        <input
-          type="number"
-          name="montant"
-          placeholder="Montant"
-          value={transaction.montant}
-          onChange={handleChange}
-          className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
+            {filteredCategories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
 
-      </div>
+          <input
+            type="datetime-local"
+            name="date"
+            value={transaction.date}
+            onChange={handleChange}
+            className="border rounded-lg px-3 py-2 text-sm"
+          />
+        </div>
 
-      <div className="grid grid-cols-2 gap-3">
-
-        <select
-          name="categorie"
-          value={transaction.categorie}
-          onChange={handleChange}
-          className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+        <button
+          type="submit"
+          className="w-full bg-violet-600 text-white py-2 rounded-lg"
         >
-          <option value="">Category</option>
-          {categories.map((cat) => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
+          {editingTransaction ? "Modifier" : "Ajouter Transaction"}
+        </button>
 
-        <input
-          type="datetime-local"
-          name="date"
-          value={transaction.date}
-          onChange={handleChange}
-          className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-
-      </div>
-
-      <button
-        type="submit"
-        className="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
-      >
-        Ajouter Transaction
-      </button>
-
-    </form>
-  </div>
-);
+      </form>
+    </div>
+  );
 }

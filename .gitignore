@@ -1,0 +1,16 @@
+node_modules/
+backend/node_modules/
+ExpensesTracker/node_modules/
+
+.env
+.env.*
+!.env.example
+
+backend/.env
+ExpensesTracker/.env
+
+dist/
+build/
+coverage/
+
+.zencoder/
