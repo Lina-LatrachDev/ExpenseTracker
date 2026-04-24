@@ -2,7 +2,7 @@ const Category = require("../models/Category");
 const User = require("../models/User");
 
 exports.getCategories = async (req, res) => {
-  const query = req.user.role === "user" ? { user: req.user.id } : {};
+  const query = { user: req.user.id };
   const categories = await Category.find(query);
   res.json(categories);
 };

@@ -1,11 +1,20 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { getUsers } from "../../api/api";
+import { FiX } from "react-icons/fi";
+import { createUser, getUsers } from "../../api/api";
 import UsersList from "../../components/Users/UsersList";
 import { useAuth } from "../../context/AuthContext";
 
+const emptyCreateForm = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  password: "",
+  role: "user"
+};
+
 export default function UsersPage() {
-  const { canManageUsers } = useAuth();
+  const { canManageUsers, isAdmin } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -14,6 +23,10 @@ export default function UsersPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [createForm, setCreateForm] = useState(emptyCreateForm);
+  const [createError, setCreateError] = useState("");
 
   if (!canManageUsers()) {
     return <Navigate to="/" />;
@@ -49,25 +62,72 @@ export default function UsersPage() {
     );
   };
 
+  const openCreateModal = () => {
+    setCreateError("");
+    setCreateForm(emptyCreateForm);
+    setIsCreateModalOpen(true);
+  };
+
+  const closeCreateModal = () => {
+    setCreateError("");
+    setCreateForm(emptyCreateForm);
+    setIsCreateModalOpen(false);
+  };
+
+  const handleCreateChange = (e) => {
+    const { name, value } = e.target;
+    setCreateForm((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    setCreateError("");
+    setIsCreatingUser(true);
+
+    try {
+      await createUser(createForm);
+      closeCreateModal();
+
+      if (page !== 1) {
+        setPage(1);
+      } else {
+        await fetchUsers();
+      }
+    } catch (err) {
+      setCreateError(
+        err.response?.data?.message || "Impossible de creer cet utilisateur."
+      );
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-50 p-8 space-y-8">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-3">
+          <h1 className="text-3xl font-semibold text-zinc-900">
+            Gestion des utilisateurs
+          </h1>
 
-      {/* HEADER */}
-      <div className="space-y-3">
-        <span className="text-xs font-semibold uppercase tracking-widest text-sky-600">
-          
-        </span>
+          <p className="max-w-xl text-sm text-zinc-500">
+            Recherchez, filtrez, creez et gerez les roles des utilisateurs.
+          </p>
+        </div>
 
-        <h1 className="text-3xl font-semibold text-zinc-900">
-          Gestion des utilisateurs
-        </h1>
-
-        <p className="text-sm text-zinc-500 max-w-xl">
-          Recherchez, filtrez et gérez les rôles des utilisateurs.
-        </p>
+        {isAdmin() ? (
+          <button
+            onClick={openCreateModal}
+            className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-violet-700"
+          >
+            Ajouter un utilisateur
+          </button>
+        ) : null}
       </div>
 
-      {/* STATS */}
       <div className="grid gap-6 md:grid-cols-3">
         <div className="rounded-2xl bg-white p-6 shadow-sm">
           <p className="text-sm text-zinc-500">Total utilisateurs</p>
@@ -82,17 +142,15 @@ export default function UsersPage() {
         </div>
 
         <div className="rounded-2xl bg-white p-6 shadow-sm">
-          <p className="text-sm text-zinc-500">Éditeurs (page)</p>
+          <p className="text-sm text-zinc-500">Editeurs (page)</p>
           <p className="mt-2 text-3xl font-semibold">
             {users.filter((u) => u.role === "editor").length}
           </p>
         </div>
       </div>
 
-      {/* FILTER BAR */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm">
-        
-        <div className="flex flex-wrap gap-3 w-full">
+      <div className="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
+        <div className="flex w-full flex-wrap gap-3">
           <input
             type="text"
             value={search}
@@ -101,7 +159,7 @@ export default function UsersPage() {
               setPage(1);
             }}
             placeholder="Rechercher..."
-            className="w-full md:max-w-sm px-4 py-2.5 rounded-xl border border-zinc-200 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+            className="w-full rounded-xl border border-zinc-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-500 md:max-w-sm"
           />
 
           <select
@@ -110,11 +168,11 @@ export default function UsersPage() {
               setRole(e.target.value);
               setPage(1);
             }}
-            className="px-4 py-2.5 rounded-xl border border-zinc-200 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+            className="rounded-xl border border-zinc-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-500"
           >
-            <option value="">Tous les rôles</option>
+            <option value="">Tous les roles</option>
             <option value="admin">Administrateur</option>
-            <option value="editor">Éditeur</option>
+            <option value="editor">Editeur</option>
             <option value="user">Utilisateur</option>
           </select>
         </div>
@@ -125,191 +183,19 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* STATES */}
-      {loading && (
-        <div className="text-center py-16 text-zinc-500">
-          Chargement...
-        </div>
-      )}
+      {loading ? (
+        <div className="py-16 text-center text-zinc-500">Chargement...</div>
+      ) : null}
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm">
+      {error ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
           {error}
         </div>
-      )}
+      ) : null}
 
-      {!loading && !error && (
+      {!loading && !error ? (
         <>
-          <div className="bg-white rounded-2xl shadow-sm p-4">
-            <UsersList users={users} onRoleUpdated={handleRoleUpdated} />
-          </div>
-
-          {/* PAGINATION */}
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-              disabled={page === 1}
-              className="px-4 py-2 rounded-xl border text-sm bg-white hover:bg-zinc-100 disabled:opacity-50"
-            >
-              Précédent
-            </button>
-
-            <span className="text-sm text-zinc-500">
-              Page {page} sur {totalPages}
-            </span>
-
-            <button
-              onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
-              disabled={page === totalPages}
-              className="px-4 py-2 rounded-xl bg-sky-600 text-white text-sm hover:bg-sky-700 disabled:opacity-50"
-            >
-              Suivant
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-{/*import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
-import { getUsers } from "../../api/api";
-import UsersList from "../../components/Users/UsersList";
-import { useAuth } from "../../context/AuthContext";
-
-export default function UsersPage() {
-  const { canManageUsers } = useAuth();
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
-  const [role, setRole] = useState("");
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalUsers, setTotalUsers] = useState(0);
-
-  if (!canManageUsers()) {
-    return <Navigate to="/" />;
-  }
-
-  useEffect(() => {
-    fetchUsers();
-  }, [search, role, page]);
-
-  const fetchUsers = async () => {
-    setLoading(true);
-    setError("");
-
-    try {
-      const res = await getUsers({ search, role, page, limit: 10 });
-      setUsers(res.data.data || []);
-      setTotalPages(res.data.totalPages || 1);
-      setTotalUsers(res.data.total || 0);
-    } catch (err) {
-      setError("Impossible de charger les utilisateurs");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRoleUpdated = (updatedUser) => {
-    setUsers((prev) =>
-      prev.map((user) =>
-        (user._id || user.id) === (updatedUser.id || updatedUser._id)
-          ? { ...user, ...updatedUser, _id: updatedUser.id || updatedUser._id }
-          : user
-      )
-    );
-  };
-
-  return (
-    <div className="min-h-screen space-y-8 rounded-[30px] bg-gradient-to-br from-sky-50 via-cyan-50 to-emerald-50 p-8">
-      <div className="rounded-[28px] border border-sky-100 bg-white/80 p-6 shadow-sm backdrop-blur">
-        <span className="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
-          Gestion des utilisateurs
-        </span>
-        <h1 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-900">
-          Administration des utilisateurs
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-zinc-600">
-          Recherchez, filtrez et gerez les roles des utilisateurs sur votre plateforme.
-        </p>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-3">
-        <div className="rounded-3xl border border-sky-100 bg-white/85 p-5 shadow-sm backdrop-blur">
-          <p className="text-sm font-medium text-sky-700">Utilisateurs au total</p>
-          <p className="mt-2 text-3xl font-semibold text-zinc-900">
-            {totalUsers}
-          </p>
-        </div>
-
-        <div className="rounded-3xl border border-amber-100 bg-white/85 p-5 shadow-sm backdrop-blur">
-          <p className="text-sm font-medium text-amber-700">Admins (page actuelle)</p>
-          <p className="mt-2 text-3xl font-semibold text-zinc-900">
-            {users.filter((u) => u.role === "admin").length}
-          </p>
-        </div>
-
-        <div className="rounded-3xl border border-emerald-100 bg-white/85 p-5 shadow-sm backdrop-blur">
-          <p className="text-sm font-medium text-emerald-700">Editeurs (page actuelle)</p>
-          <p className="mt-2 text-3xl font-semibold text-zinc-900">
-            {users.filter((u) => u.role === "editor").length}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-4 rounded-[28px] border border-white/70 bg-white/75 p-5 shadow-sm backdrop-blur md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-wrap items-center gap-3 w-full">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Rechercher des utilisateurs..."
-            className="w-full rounded-2xl border border-sky-100 bg-sky-50/70 px-4 py-3 text-sm shadow-sm outline-none transition focus:ring-2 focus:ring-sky-400 md:max-w-sm"
-          />
-
-          <select
-            value={role}
-            onChange={(e) => {
-              setRole(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-2xl border border-sky-100 bg-sky-50/70 px-4 py-3 text-sm shadow-sm outline-none transition focus:ring-2 focus:ring-sky-400"
-          >
-            <option value="">Tous les roles</option>
-            <option value="admin">Administrateur</option>
-            <option value="editor">Editeur</option>
-            <option value="user">Utilisateur</option>
-          </select>
-        </div>
-
-        <div className="text-sm text-zinc-500">
-          Page <span className="font-medium">{page}</span> sur{" "}
-          <span className="font-medium">{totalPages}</span>
-        </div>
-      </div>
-
-      {/* STATES 
-      {loading && (
-        <div className="flex justify-center py-16 text-zinc-500">
-          Chargement des utilisateurs...
-        </div>
-      )}
-
-      {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-          {error}
-        </div>
-      )}
-
-      {!loading && !error && (
-        <>
-          <div className="rounded-[28px] border border-white/70 bg-white/80 p-4 shadow-sm backdrop-blur">
+          <div className="rounded-2xl bg-white p-4 shadow-sm">
             <UsersList users={users} onRoleUpdated={handleRoleUpdated} />
           </div>
 
@@ -317,25 +203,163 @@ export default function UsersPage() {
             <button
               onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
               disabled={page === 1}
-              className="rounded-2xl border border-sky-100 bg-white/80 px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm transition hover:bg-sky-50 disabled:opacity-50"
+              className="rounded-xl bg-violet-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Precedent
             </button>
 
-            <span className="text-sm text-zinc-500">
-              Affichage de la page {page} sur {totalPages}
-            </span>
+            <div className="flex flex-wrap justify-center gap-2">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
+                const isActive = pageNum === page;
+
+                if (
+                  pageNum === 1 ||
+                  pageNum === totalPages ||
+                  (pageNum >= page - 2 && pageNum <= page + 2)
+                ) {
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setPage(pageNum)}
+                      className={`rounded-lg px-3 py-1.5 text-sm transition ${
+                        isActive
+                          ? "bg-violet-600 text-white"
+                          : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                }
+
+                if (pageNum === page - 3 || pageNum === page + 3) {
+                  return (
+                    <span key={`dots-${pageNum}`} className="px-2 py-1 text-gray-400">
+                      ...
+                    </span>
+                  );
+                }
+
+                return null;
+              })}
+            </div>
 
             <button
               onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
               disabled={page === totalPages}
-              className="rounded-2xl bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-50"
+              className="rounded-xl bg-violet-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Suivant
             </button>
           </div>
         </>
-      )}
+      ) : null}
+
+      {isCreateModalOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={closeCreateModal}
+        >
+          <div
+            className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={closeCreateModal}
+              aria-label="Close create user modal"
+              className="absolute right-4 top-4 rounded-full p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700"
+            >
+              <FiX size={18} />
+            </button>
+
+            <h2 className="mb-2 pr-10 text-xl font-semibold text-zinc-900">
+              Creer un utilisateur
+            </h2>
+            <p className="mb-5 text-sm text-zinc-500">
+              Les administrateurs peuvent creer des comptes utilisateur ou editeur.
+            </p>
+
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              {createError ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                  {createError}
+                </div>
+              ) : null}
+
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  name="firstName"
+                  value={createForm.firstName}
+                  onChange={handleCreateChange}
+                  placeholder="Prenom"
+                  required
+                  className="rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-violet-500"
+                />
+                <input
+                  type="text"
+                  name="lastName"
+                  value={createForm.lastName}
+                  onChange={handleCreateChange}
+                  placeholder="Nom"
+                  required
+                  className="rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-violet-500"
+                />
+              </div>
+
+              <input
+                type="email"
+                name="email"
+                value={createForm.email}
+                onChange={handleCreateChange}
+                placeholder="Email"
+                required
+                className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-violet-500"
+              />
+
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="password"
+                  name="password"
+                  value={createForm.password}
+                  onChange={handleCreateChange}
+                  placeholder="Mot de passe"
+                  required
+                  minLength={6}
+                  className="rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-violet-500"
+                />
+                <select
+                  name="role"
+                  value={createForm.role}
+                  onChange={handleCreateChange}
+                  className="rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-violet-500"
+                >
+                  <option value="user">Utilisateur</option>
+                  <option value="editor">Editeur</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={closeCreateModal}
+                  className="rounded-xl border border-zinc-200 px-4 py-2 text-sm transition hover:bg-zinc-100"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingUser}
+                  className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isCreatingUser ? "Creation..." : "Creer"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
-}*/}
+}

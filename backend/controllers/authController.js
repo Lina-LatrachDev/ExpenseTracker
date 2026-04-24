@@ -1,6 +1,8 @@
 const User = require("../models/User");
+const Category = require("../models/Category");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { buildDefaultCategoriesForUser } = require("../utils/defaultCategories");
 
 exports.signup = async (req, res) => {
   const { firstName, lastName, email, password } = req.body;
@@ -21,6 +23,7 @@ exports.signup = async (req, res) => {
     });
 
     await user.save();
+    await Category.insertMany(buildDefaultCategoriesForUser(user._id));
 
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },

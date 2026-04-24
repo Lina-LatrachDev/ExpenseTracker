@@ -15,6 +15,9 @@ const emptyForm = {
   color: "#60a5fa"
 };
 
+const formatTypeLabel = (type) =>
+  type === "income" ? "Revenu" : type === "expense" ? "Depense" : type;
+
 export default function UserCategoriesPage() {
   const { userId } = useParams();
 
@@ -248,7 +251,7 @@ export default function UserCategoriesPage() {
               {currentCategories.map((cat) => (
                 <tr key={cat._id} className="border-b hover:bg-zinc-50">
                   <td className="py-2">{cat.name}</td>
-                  <td>{cat.type}</td>
+                  <td>{formatTypeLabel(cat.type)}</td>
                   <td>
                     <span
                       className="inline-block w-4 h-4 rounded-full"
@@ -283,7 +286,8 @@ export default function UserCategoriesPage() {
         <div className="flex justify-center gap-2 mt-4 flex-wrap">
           <button
             onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-            className="px-4 py-1 rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition"
+            disabled={currentPage === 1}
+            className="rounded-xl bg-violet-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Précédent
           </button>
@@ -300,10 +304,10 @@ export default function UserCategoriesPage() {
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`px-3 py-1 rounded-lg transition ${
+                  className={`rounded-lg px-3 py-1.5 text-sm transition ${
                     isActive
                       ? "bg-violet-600 text-white"
-                      : "bg-white border text-gray-700 hover:bg-violet-100"
+                      : "bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-100"
                   }`}
                 >
                   {pageNum}
@@ -324,7 +328,8 @@ export default function UserCategoriesPage() {
 
           <button
             onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-            className="px-4 py-1 rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition"
+            disabled={currentPage === totalPages}
+            className="rounded-xl bg-violet-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Suivant
           </button>

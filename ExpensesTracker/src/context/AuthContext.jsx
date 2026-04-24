@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect } from "react";
-import API from "../api/api";
+import { createContext, useContext, useEffect, useState } from "react";
+import API, { getProfile } from "../api/api";
 
 const AuthContext = createContext();
 
@@ -9,6 +9,35 @@ export function AuthProvider({ children }) {
     return saved ? JSON.parse(saved) : null;
   });
   const [loading, setLoading] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    const verifyStoredSession = async () => {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        setCurrentUser(null);
+        setAuthReady(true);
+        return;
+      }
+
+      try {
+        const res = await getProfile();
+        const profile = res.data;
+
+        setCurrentUser({
+          token,
+          ...profile
+        });
+      } catch (err) {
+        setCurrentUser(null);
+      } finally {
+        setAuthReady(true);
+      }
+    };
+
+    verifyStoredSession();
+  }, []);
 
   // Persist user & token in localStorage
   useEffect(() => {
@@ -84,6 +113,7 @@ export function AuthProvider({ children }) {
       value={{
         currentUser,
         loading,
+        authReady,
         signup,
         login,
         logout,

@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { FiEdit, FiTrash2 } from "react-icons/fi";
+import { FiEdit, FiTrash2, FiX } from "react-icons/fi";
 import FiltersBar from "../../components/Transactions/FiltersBar";
 import {
   addTransaction,
@@ -17,6 +17,9 @@ const emptyForm = () => ({
   categorie: "",
   date: new Date().toISOString().slice(0, 16)
 });
+
+const formatTypeLabel = (type) =>
+  type === "income" ? "Revenu" : type === "expense" ? "Depense" : type;
 
 export default function UserTransactionsPage() {
   const { userId } = useParams();
@@ -268,7 +271,7 @@ export default function UserTransactionsPage() {
                 <tr key={tx._id} className="border-b hover:bg-zinc-50">
                   <td className="py-2">{tx.nom}</td>
                   <td>{tx.categorie?.name || "Uncategorized"}</td>
-                  <td className="capitalize">{tx.type}</td>
+                  <td>{formatTypeLabel(tx.type)}</td>
                   <td>{tx.montant}</td>
                   <td>{tx.date ? new Date(tx.date).toLocaleDateString() : "-"}</td>
                   <td>
@@ -300,7 +303,8 @@ export default function UserTransactionsPage() {
         <div className="flex justify-center gap-2 mt-4 flex-wrap">
           <button
             onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-            className="px-4 py-1 rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition"
+            disabled={currentPage === 1}
+            className="rounded-xl bg-violet-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Précédent
           </button>
@@ -317,10 +321,10 @@ export default function UserTransactionsPage() {
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`px-3 py-1 rounded-lg transition ${
+                  className={`rounded-lg px-3 py-1.5 text-sm transition ${
                     isActive
                       ? "bg-violet-600 text-white"
-                      : "bg-white border text-gray-700 hover:bg-violet-100"
+                      : "bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-100"
                   }`}
                 >
                   {pageNum}
@@ -341,7 +345,8 @@ export default function UserTransactionsPage() {
 
           <button
             onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-            className="px-4 py-1 rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition"
+            disabled={currentPage === totalPages}
+            className="rounded-xl bg-violet-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Suivant
           </button>
@@ -354,10 +359,18 @@ export default function UserTransactionsPage() {
           onClick={closeModal}
         >
           <div
-            className="bg-white p-6 rounded-xl w-full max-w-lg shadow-xl"
+            className="relative bg-white p-6 rounded-xl w-full max-w-lg shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-xl font-semibold mb-4">
+            <button
+              type="button"
+              onClick={closeModal}
+              aria-label="Close transaction modal"
+              className="absolute right-4 top-4 rounded-full p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700"
+            >
+              <FiX size={18} />
+            </button>
+            <h2 className="text-xl font-semibold mb-4 pr-10">
               {editingTransaction ? "Edit Transaction" : "Add Transaction"}
             </h2>
 

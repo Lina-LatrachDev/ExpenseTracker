@@ -1,5 +1,12 @@
-import { useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useParams
+} from "react-router-dom";
 
 import { TransactionProvider } from "./context/TransactionContext";
 import { CategoryProvider } from "./context/CategoryContext";
@@ -28,15 +35,33 @@ function LegacyUserActivityRedirect() {
 }
 
 function AppContent() {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, authReady } = useAuth();
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
+  const hideGlobalAddButton =
+    location.pathname.startsWith("/admin") || location.pathname === "/users";
 
   const handleEditTransaction = (tx) => {
     setEditingTransaction(tx);
     setShowModal(true);
   };
+
+  useEffect(() => {
+    if (hideGlobalAddButton && showModal) {
+      setShowModal(false);
+      setEditingTransaction(null);
+    }
+  }, [hideGlobalAddButton, showModal]);
+
+  if (!authReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 text-zinc-600">
+        Vérification de la session...
+      </div>
+    );
+  }
 
   if (!currentUser) {
     return (
@@ -76,15 +101,17 @@ function AppContent() {
           <Route path="/admin/users/:userId/categories" element={<LegacyUserActivityRedirect />} />
         </Routes>
 
-        <button
-          onClick={() => {
-            setEditingTransaction(null);
-            setShowModal(true);
-          }}
-          className="fixed bottom-8 right-8 flex h-14 w-14 items-center justify-center rounded-full bg-violet-600 text-2xl text-white shadow-lg transition hover:scale-105 hover:bg-violet-700"
-        >
-          +
-        </button>
+        {!hideGlobalAddButton ? (
+          <button
+            onClick={() => {
+              setEditingTransaction(null);
+              setShowModal(true);
+            }}
+            className="fixed bottom-8 right-8 flex h-14 w-14 items-center justify-center rounded-full bg-violet-600 text-2xl text-white shadow-lg transition hover:scale-105 hover:bg-violet-700"
+          >
+            +
+          </button>
+        ) : null}
 
         {showModal && (
           <div

@@ -5,6 +5,7 @@ const auth = require("../middleware/auth");
 const authorizeRoles = require("../middleware/role");
 
 const {
+  createUser,
   getProfile,
   deleteUser,
   getAllUsers,
@@ -15,6 +16,7 @@ const {
 
 router.get("/profile", auth, getProfile);
 router.get("/admin-dashboard", auth, authorizeRoles("admin"), getAdminDashboard);
+router.post("/", auth, authorizeRoles("admin"), createUser);
 router.get("/", auth, authorizeRoles("admin", "editor"), getAllUsers);
 router.get("/:id", auth, authorizeRoles("admin", "editor"), getUserById);
 router.patch("/:id/role", auth, authorizeRoles("admin"), updateUserRole);

@@ -4,7 +4,8 @@ import {
   FiChevronDown,
   FiEdit,
   FiSearch,
-  FiTrash2
+  FiTrash2,
+  FiX
 } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 import Chip from "../../components/UI/Chip";
@@ -34,6 +35,9 @@ const emptyCategoryForm = {
   type: "expense",
   color: "#60a5fa"
 };
+
+const formatTypeLabel = (type) =>
+  type === "income" ? "Revenu" : type === "expense" ? "Depense" : type;
 
 export default function UserActivityPage() {
   const { userId } = useParams();
@@ -104,7 +108,7 @@ export default function UserActivityPage() {
       setCategories(categoriesRes.data.data || []);
     } catch (err) {
       console.error("Failed to load user activity:", err);
-      setError("Failed to load this user's activity.");
+      setError("Impossible de charger l'activite de cet utilisateur.");
     } finally {
       setLoading(false);
     }
@@ -289,27 +293,27 @@ export default function UserActivityPage() {
 
       closeTransactionModal();
     } catch (err) {
-      console.error("Failed to save transaction:", err);
+      console.error("Impossible de sauvegarder la transaction:", err);
       setError(
         err.response?.data?.message ||
           (editingTransaction
-            ? "Failed to update this transaction."
-            : "Failed to add this transaction.")
+            ? "Impossible de mettre a jour cette transaction."
+            : "Impossible d'ajouter cette transaction.")
       );
     }
   };
 
   const handleDeleteTransaction = async (transactionId) => {
-    if (!window.confirm("Delete this transaction?")) return;
+    if (!window.confirm("Supprimer cette transaction ?")) return;
     setError("");
 
     try {
       await deleteTransaction(transactionId);
       setTransactions((prev) => prev.filter((tx) => tx._id !== transactionId));
     } catch (err) {
-      console.error("Failed to delete transaction:", err);
+      console.error("Impossible de supprimer la transaction:", err);
       setError(
-        err.response?.data?.message || "Failed to delete this transaction."
+        err.response?.data?.message || "Impossible de supprimer cette transaction."
       );
     }
   };
@@ -343,23 +347,23 @@ export default function UserActivityPage() {
       setError(
         err.response?.data?.message ||
           (editingCategory
-            ? "Failed to update this category."
-            : "Failed to add this category.")
+            ? "Impossible de mettre a jour cette categorie."
+            : "Impossible d'ajouter cette categorie.")
       );
     }
   };
 
   const handleDeleteCategory = async (categoryId) => {
-    if (!window.confirm("Delete this category?")) return;
+    if (!window.confirm("Supprimer cette categorie ?")) return;
     setError("");
 
     try {
       await deleteCategory(categoryId);
       setCategories((prev) => prev.filter((cat) => cat._id !== categoryId));
     } catch (err) {
-      console.error("Failed to delete category:", err);
+      console.error("Impossible de supprimer la categorie:", err);
       setError(
-        err.response?.data?.message || "Failed to delete this category."
+        err.response?.data?.message || "Impossible de supprimer cette categorie."
       );
     }
   };
@@ -372,12 +376,13 @@ export default function UserActivityPage() {
   };
 
   const renderPagination = (currentPage, totalPages, setPage) => (
-    <div className="flex justify-center gap-2 mt-4 flex-wrap">
+    <div className="mt-4 flex flex-wrap justify-center gap-2">
       <button
         onClick={() => setPage((p) => Math.max(p - 1, 1))}
-        className="rounded-xl bg-sky-600 px-4 py-1 text-white transition hover:bg-sky-700"
+        disabled={currentPage === 1}
+        className="rounded-xl bg-violet-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        Précédent
+        Precedent
       </button>
       {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
         const isActive = pageNum === currentPage;
@@ -391,10 +396,10 @@ export default function UserActivityPage() {
             <button
               key={pageNum}
               onClick={() => setPage(pageNum)}
-              className={`px-3 py-1 rounded-lg transition ${
+              className={`rounded-lg px-3 py-1.5 text-sm transition ${
                 isActive
-                  ? "bg-sky-600 text-white"
-                  : "bg-white border border-sky-100 text-gray-700 hover:bg-sky-50"
+                  ? "bg-violet-600 text-white"
+                  : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100"
               }`}
             >
               {pageNum}
@@ -414,7 +419,8 @@ export default function UserActivityPage() {
       })}
       <button
         onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-        className="rounded-xl bg-sky-600 px-4 py-1 text-white transition hover:bg-sky-700"
+        disabled={currentPage === totalPages}
+        className="rounded-xl bg-violet-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
         Suivant
       </button>
@@ -422,7 +428,13 @@ export default function UserActivityPage() {
   );
 
   if (loading) {
-    return <p className="p-6">Loading user activity...</p>;
+    return (
+      <div className="min-h-screen bg-zinc-50 p-8">
+        <div className="flex items-center justify-center rounded-2xl bg-white px-6 py-16 text-zinc-500 shadow-sm">
+          Chargement de l'activite de l'utilisateur...
+        </div>
+      </div>
+    );
   }
 
   const userRoleClass =
@@ -433,58 +445,70 @@ export default function UserActivityPage() {
         : "bg-violet-100 text-violet-700 ring-1 ring-violet-200";
 
   return (
-    <div className="min-h-screen space-y-6 rounded-[30px] bg-gradient-to-br from-sky-50 via-cyan-50 to-teal-50 p-6">
-      <div className="rounded-[28px] border border-sky-100 bg-white/80 p-6 shadow-sm backdrop-blur">
+    <div className="min-h-screen space-y-8 bg-zinc-50 p-8">
+      <div className="rounded-2xl bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-medium uppercase tracking-[0.24em] text-sky-700">User Activity</p>
-            <h1 className="text-3xl font-bold text-zinc-900">
+            <p className="text-xs font-semibold uppercase tracking-widest text-violet-600">
+              Gestion de l'activite
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold text-zinc-900">
               {user ? `${user.firstName} ${user.lastName}` : "Unknown User"}
             </h1>
-            <p className="mt-1 text-zinc-500">{user?.email || "No email available"}</p>
+            <p className="mt-1 text-sm text-zinc-500">
+              {user?.email || "No email available"}
+            </p>
           </div>
           {user ? (
-            <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold capitalize ${userRoleClass}`}>
+            <span
+              className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold capitalize ${userRoleClass}`}
+            >
               {user.role}
             </span>
           ) : null}
         </div>
 
-        <div className="mt-6 inline-flex rounded-2xl bg-sky-100/80 p-1">
+        <div className="mt-6 inline-flex rounded-2xl bg-zinc-100 p-1">
           <button
             onClick={() => setActiveTab("transactions")}
             className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
               activeTab === "transactions"
-                ? "bg-white text-sky-700 shadow"
+                ? "bg-white text-violet-700 shadow-sm"
                 : "text-zinc-600 hover:text-zinc-900"
             }`}
           >
-            View Transactions
+            Voir les Transactions
           </button>
           <button
             onClick={() => setActiveTab("categories")}
             className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
               activeTab === "categories"
-                ? "bg-white text-sky-700 shadow"
+                ? "bg-white text-violet-700 shadow-sm"
                 : "text-zinc-600 hover:text-zinc-900"
             }`}
           >
-            View Categories
+            Voir les Categories
           </button>
         </div>
       </div>
 
-      {error ? <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-500">{error}</p> : null}
+      {error ? (
+        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          {error}
+        </p>
+      ) : null}
 
       {activeTab === "transactions" ? (
         <>
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-zinc-900">Transactions</h2>
+            <h2 className="text-2xl font-semibold text-zinc-900">
+              Transactions
+            </h2>
             <button
               onClick={openCreateTransactionModal}
-              className="rounded-2xl bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-700"
+              className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-violet-700"
             >
-              Add Transaction
+              Ajouter une Transaction
             </button>
           </div>
 
@@ -495,34 +519,43 @@ export default function UserActivityPage() {
           />
 
           {filteredTransactions.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-sky-200 bg-white/70 px-4 py-8 text-center text-zinc-500">No transactions found for this user.</p>
+            <p className="rounded-2xl border border-dashed border-zinc-200 bg-white px-4 py-8 text-center text-zinc-500 shadow-sm">
+              Aucune transaction trouvee pour cet utilisateur.
+            </p>
           ) : (
             <>
-              <div className="overflow-hidden rounded-[28px] border border-sky-100 bg-white/85 p-4 shadow-sm backdrop-blur">
+              <div className="overflow-hidden rounded-2xl bg-white p-4 shadow-sm">
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="border-b border-sky-100 text-sm text-zinc-500">
-                      <th className="py-3">Name</th>
-                      <th className="py-3">Category</th>
+                    <tr className="border-b border-zinc-200 text-sm text-zinc-500">
+                      <th className="py-3">Nom</th>
+                      <th className="py-3">Categorie</th>
                       <th className="py-3">Type</th>
-                      <th className="py-3">Amount</th>
+                      <th className="py-3">Montant</th>
                       <th className="py-3">Date</th>
                       <th className="py-3">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {currentTransactions.map((tx) => (
-                      <tr key={tx._id} className="border-b border-sky-50 hover:bg-sky-50/50">
+                      <tr
+                        key={tx._id}
+                        className="border-b border-zinc-100 hover:bg-zinc-50"
+                      >
                         <td className="py-2">{tx.nom}</td>
                         <td>{tx.categorie?.name || "Uncategorized"}</td>
-                        <td className="capitalize">{tx.type}</td>
+                        <td>{formatTypeLabel(tx.type)}</td>
                         <td>{tx.montant}</td>
-                        <td>{tx.date ? new Date(tx.date).toLocaleDateString() : "-"}</td>
+                        <td>
+                          {tx.date
+                            ? new Date(tx.date).toLocaleDateString()
+                            : "-"}
+                        </td>
                         <td>
                           <div className="flex items-center gap-3">
                             <button
                               onClick={() => openEditTransactionModal(tx)}
-                              className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm text-sky-700 hover:bg-sky-50"
+                              className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-violet-600 hover:bg-violet-50"
                             >
                               <FiEdit size={16} />
                               Edit
@@ -541,25 +574,31 @@ export default function UserActivityPage() {
                   </tbody>
                 </table>
               </div>
-              {renderPagination(transactionPage, transactionTotalPages, setTransactionPage)}
+              {renderPagination(
+                transactionPage,
+                transactionTotalPages,
+                setTransactionPage
+              )}
             </>
           )}
         </>
       ) : (
         <>
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-zinc-900">Categories</h2>
+            <h2 className="text-2xl font-semibold text-zinc-900">
+              Categories
+            </h2>
             <button
               onClick={openCreateCategoryModal}
-              className="rounded-2xl bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-700"
+              className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-violet-700"
             >
-              Add Category
+              Ajouter une Categorie
             </button>
           </div>
 
-          <div className="max-w-5xl rounded-[28px] border border-sky-100 bg-white/85 p-5 shadow-sm backdrop-blur">
-            <div className="flex flex-col md:flex-row md:justify-between gap-4">
-              <div className="flex w-full items-center gap-2 rounded-2xl bg-sky-50 px-4 py-2 md:w-1/3 focus-within:ring-2 focus-within:ring-sky-400">
+          <div className="max-w-5xl rounded-2xl bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-4 md:flex-row md:justify-between">
+              <div className="flex w-full items-center gap-2 rounded-xl bg-gray-100 px-4 py-2 md:w-1/3 focus-within:ring-2 focus-within:ring-violet-500">
                 <FiSearch className="text-gray-500" />
                 <input
                   type="text"
@@ -571,21 +610,21 @@ export default function UserActivityPage() {
                       search: e.target.value
                     }))
                   }
-                  className="bg-transparent outline-none w-full text-sm"
+                  className="w-full bg-transparent text-sm outline-none"
                 />
               </div>
 
               <button
                 onClick={resetCategoryFilters}
-                className="rounded-2xl border border-sky-100 px-4 py-2 text-sm transition hover:bg-sky-50"
+                className="rounded-xl border border-zinc-200 px-4 py-2 text-sm transition hover:bg-zinc-100"
               >
                 Réinitialiser
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
               <div className="flex flex-col">
-                <label className="text-xs text-gray-500 mb-1">Type</label>
+                <label className="mb-1 text-xs text-gray-500">Type</label>
                 <div className="relative">
                   <select
                     value={categoryFilters.typeFilter}
@@ -595,18 +634,18 @@ export default function UserActivityPage() {
                         typeFilter: e.target.value
                       }))
                     }
-                    className="w-full appearance-none rounded-2xl bg-sky-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                    className="w-full appearance-none rounded-xl bg-gray-100 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500"
                   >
                     <option value="all">Tous</option>
                     <option value="income">Revenu</option>
-                    <option value="expense">Dépense</option>
+                    <option value="expense">Depense</option>
                   </select>
-                  <FiChevronDown className="absolute right-3 top-2.5 text-gray-500 pointer-events-none" />
+                  <FiChevronDown className="pointer-events-none absolute right-3 top-2.5 text-gray-500" />
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 mt-4">
+            <div className="mt-4 flex flex-wrap gap-2">
               {categoryFilters.search ? (
                 <Chip
                   label={`Recherche: ${categoryFilters.search}`}
@@ -618,10 +657,15 @@ export default function UserActivityPage() {
               {categoryFilters.typeFilter !== "all" ? (
                 <Chip
                   label={`Type: ${
-                    categoryFilters.typeFilter === "income" ? "Revenu" : "Dépense"
+                    categoryFilters.typeFilter === "income"
+                      ? "Revenu"
+                      : "Depense"
                   }`}
                   onRemove={() =>
-                    setCategoryFilters((prev) => ({ ...prev, typeFilter: "all" }))
+                    setCategoryFilters((prev) => ({
+                      ...prev,
+                      typeFilter: "all"
+                    }))
                   }
                 />
               ) : null}
@@ -629,27 +673,32 @@ export default function UserActivityPage() {
           </div>
 
           {filteredCategories.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-sky-200 bg-white/70 px-4 py-8 text-center text-zinc-500">No categories found for this user.</p>
+            <p className="rounded-2xl border border-dashed border-zinc-200 bg-white px-4 py-8 text-center text-zinc-500 shadow-sm">
+              Aucune categorie trouvee pour cet utilisateur.
+            </p>
           ) : (
             <>
-              <div className="overflow-hidden rounded-[28px] border border-sky-100 bg-white/85 p-4 shadow-sm backdrop-blur">
+              <div className="overflow-hidden rounded-2xl bg-white p-4 shadow-sm">
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="border-b border-sky-100 text-sm text-zinc-500">
-                      <th className="py-3">Name</th>
+                    <tr className="border-b border-zinc-200 text-sm text-zinc-500">
+                      <th className="py-3">Nom</th>
                       <th className="py-3">Type</th>
-                      <th className="py-3">Color</th>
+                      <th className="py-3">Couleur</th>
                       <th className="py-3">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {currentCategories.map((cat) => (
-                      <tr key={cat._id} className="border-b border-sky-50 hover:bg-sky-50/50">
+                      <tr
+                        key={cat._id}
+                        className="border-b border-zinc-100 hover:bg-zinc-50"
+                      >
                         <td className="py-2">{cat.name}</td>
-                        <td>{cat.type}</td>
+                        <td>{formatTypeLabel(cat.type)}</td>
                         <td>
                           <span
-                            className="inline-block w-4 h-4 rounded-full"
+                            className="inline-block h-4 w-4 rounded-full"
                             style={{ backgroundColor: cat.color }}
                           />
                         </td>
@@ -657,16 +706,16 @@ export default function UserActivityPage() {
                           <div className="flex items-center gap-3">
                             <button
                               onClick={() => openEditCategoryModal(cat)}
-                              className="inline-flex items-center gap-2 rounded-xl px-2 py-1 text-sm text-sky-700 hover:bg-sky-50"
+                              className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-violet-600 hover:bg-violet-50"
                             >
                               <FiEdit size={16} />
-                              Edit
+                              Modifier
                             </button>
                             <button
                               onClick={() => handleDeleteCategory(cat._id)}
-                              className="text-red-500 text-sm"
+                              className="text-sm text-red-500"
                             >
-                              Delete
+                              Supprimer
                             </button>
                           </div>
                         </td>
@@ -675,7 +724,11 @@ export default function UserActivityPage() {
                   </tbody>
                 </table>
               </div>
-              {renderPagination(categoryPage, categoryTotalPages, setCategoryPage)}
+              {renderPagination(
+                categoryPage,
+                categoryTotalPages,
+                setCategoryPage
+              )}
             </>
           )}
         </>
@@ -683,15 +736,23 @@ export default function UserActivityPage() {
 
       {isTransactionModalOpen ? (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
           onClick={closeTransactionModal}
         >
           <div
-            className="bg-white p-6 rounded-xl w-full max-w-lg shadow-xl"
+            className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-xl font-semibold mb-4">
-              {editingTransaction ? "Edit Transaction" : "Add Transaction"}
+            <button
+              type="button"
+              onClick={closeTransactionModal}
+              aria-label="Close transaction modal"
+              className="absolute right-4 top-4 rounded-full p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700"
+            >
+              <FiX size={18} />
+            </button>
+            <h2 className="mb-4 pr-10 text-xl font-semibold text-zinc-900">
+              {editingTransaction ? "Modifier Transaction" : "Ajouter Transaction"}
             </h2>
             <form onSubmit={handleSaveTransaction} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
@@ -700,16 +761,16 @@ export default function UserActivityPage() {
                   name="nom"
                   value={transactionForm.nom}
                   onChange={handleTransactionChange}
-                  placeholder="Name"
-                  className="border rounded-lg px-3 py-2 text-sm"
+                  placeholder="Nom"
+                  className="rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-violet-500"
                 />
                 <input
                   type="number"
                   name="montant"
                   value={transactionForm.montant}
                   onChange={handleTransactionChange}
-                  placeholder="Amount"
-                  className="border rounded-lg px-3 py-2 text-sm"
+                  placeholder="Montant"
+                  className="rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-violet-500"
                 />
               </div>
 
@@ -718,18 +779,18 @@ export default function UserActivityPage() {
                   name="type"
                   value={transactionForm.type}
                   onChange={handleTransactionChange}
-                  className="border rounded-lg px-3 py-2 text-sm"
+                  className="rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-violet-500"
                 >
-                  <option value="expense">Expense</option>
-                  <option value="income">Income</option>
+                  <option value="expense">Depense</option>
+                  <option value="income">Revenu</option>
                 </select>
                 <select
                   name="categorie"
                   value={transactionForm.categorie}
                   onChange={handleTransactionChange}
-                  className="border rounded-lg px-3 py-2 text-sm"
+                  className="rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-violet-500"
                 >
-                  <option value="">Category</option>
+                  <option value="">Categorie</option>
                   {filteredTransactionCategories.map((cat) => (
                     <option key={cat._id || cat.id} value={cat._id || cat.id}>
                       {cat.name}
@@ -743,22 +804,22 @@ export default function UserActivityPage() {
                 name="date"
                 value={transactionForm.date}
                 onChange={handleTransactionChange}
-                className="w-full border rounded-lg px-3 py-2 text-sm"
+                className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-violet-500"
               />
 
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={closeTransactionModal}
-                  className="px-4 py-2 rounded-lg border"
+                  className="rounded-xl border border-zinc-200 px-4 py-2 text-sm transition hover:bg-zinc-100"
                 >
-                  Cancel
+                  Annuler
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-violet-600 text-white"
+                  className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700"
                 >
-                  Save
+                  Sauvegarder
                 </button>
               </div>
             </form>
@@ -768,15 +829,23 @@ export default function UserActivityPage() {
 
       {isCategoryModalOpen ? (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
           onClick={closeCategoryModal}
         >
           <div
-            className="bg-white p-6 rounded-xl w-full max-w-md shadow-xl"
+            className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-xl font-semibold mb-4">
-              {editingCategory ? "Edit Category" : "Add Category"}
+            <button
+              type="button"
+              onClick={closeCategoryModal}
+              aria-label="Close category modal"
+              className="absolute right-4 top-4 rounded-full p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700"
+            >
+              <FiX size={18} />
+            </button>
+            <h2 className="mb-4 pr-10 text-xl font-semibold text-zinc-900">
+              {editingCategory ? "Modifier la Categorie" : "Ajouter une Categorie"}
             </h2>
             <form onSubmit={handleSaveCategory} className="space-y-4">
               <input
@@ -785,18 +854,18 @@ export default function UserActivityPage() {
                 onChange={(e) =>
                   setCategoryForm((prev) => ({ ...prev, name: e.target.value }))
                 }
-                placeholder="Category name"
-                className="w-full border rounded-lg px-3 py-2 text-sm"
+                placeholder="Nom de la categorie"
+                className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-violet-500"
               />
               <select
                 value={categoryForm.type}
                 onChange={(e) =>
                   setCategoryForm((prev) => ({ ...prev, type: e.target.value }))
                 }
-                className="w-full border rounded-lg px-3 py-2 text-sm"
+                className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-violet-500"
               >
-                <option value="expense">Expense</option>
-                <option value="income">Income</option>
+                <option value="expense">Depense</option>
+                <option value="income">Revenu</option>
               </select>
               <input
                 type="color"
@@ -804,22 +873,22 @@ export default function UserActivityPage() {
                 onChange={(e) =>
                   setCategoryForm((prev) => ({ ...prev, color: e.target.value }))
                 }
-                className="w-full h-10"
+                className="h-10 w-full"
               />
 
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={closeCategoryModal}
-                  className="px-4 py-2 rounded-lg border"
+                  className="rounded-xl border border-zinc-200 px-4 py-2 text-sm transition hover:bg-zinc-100"
                 >
-                  Cancel
+                  Annuler
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-violet-600 text-white"
+                  className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700"
                 >
-                  Save
+                  Sauvegarder
                 </button>
               </div>
             </form>

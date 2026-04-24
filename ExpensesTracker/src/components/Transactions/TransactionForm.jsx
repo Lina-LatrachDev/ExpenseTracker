@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
+import { FiX } from "react-icons/fi";
 import { useTransaction } from "../../context/TransactionContext";
 import { useCategory } from "../../context/CategoryContext";
 
 export default function TransactionForm({
   //categories,
   //addTransaction,
-  editingTransaction
+  editingTransaction,
+  onClose
 }) {
   
   const now = new Date().toISOString().slice(0, 16);
@@ -120,6 +122,7 @@ export default function TransactionForm({
     });
 
     setCalc({ HT: null, TVA: null, TTC: null });
+    onClose?.();
 
   } catch (err) {
     console.error(err);
@@ -127,8 +130,17 @@ export default function TransactionForm({
 };
 
   return (
-    <div className="w-[420px] bg-white p-6 rounded-2xl shadow-xl">
-      <h2 className="text-xl font-semibold mb-5">
+    <div className="relative w-[420px] bg-white p-6 rounded-2xl shadow-xl">
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close transaction modal"
+        className="absolute right-4 top-4 rounded-full p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700"
+      >
+        <FiX size={18} />
+      </button>
+
+      <h2 className="text-xl font-semibold mb-5 pr-10">
         {editingTransaction ? "Modifier Transaction" : "Nouvelle Transaction"}
       </h2>
 

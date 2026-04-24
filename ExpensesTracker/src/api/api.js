@@ -56,7 +56,9 @@ export const getUsers = ({ search = "", role = "", page = 1, limit = 10 } = {}) 
     params: { search, role, page, limit }
   });
 
+export const createUser = (userData) => API.post("/users", userData);
 export const getAdminDashboard = () => API.get("/users/admin-dashboard");
+export const getProfile = () => API.get("/users/profile");
 export const getUserById = (id) => API.get(`/users/${id}`);
 export const updateUserRole = (id, role) => API.patch(`/users/${id}/role`, { role });
 

@@ -94,7 +94,8 @@ export default function TransactionsPage({ onEdit }) {
 
         <button
           onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-          className="px-4 py-1 rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition"
+          disabled={currentPage === 1}
+          className="rounded-xl bg-violet-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Précédent
         </button>
@@ -112,10 +113,10 @@ export default function TransactionsPage({ onEdit }) {
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`px-3 py-1 rounded-lg transition
+                  className={`rounded-lg px-3 py-1.5 text-sm transition
                     ${isActive
                       ? "bg-violet-600 text-white"
-                      : "bg-white border text-gray-700 hover:bg-violet-100"
+                      : "bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-100"
                     }`}
                 >
                   {pageNum}
@@ -140,7 +141,8 @@ export default function TransactionsPage({ onEdit }) {
 
         <button
           onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-          className="px-4 py-1 rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition"
+          disabled={currentPage === totalPages || totalPages === 0}
+          className="rounded-xl bg-violet-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Suivant
         </button>

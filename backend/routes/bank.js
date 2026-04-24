@@ -3,6 +3,7 @@ const router = express.Router();
 const Transaction = require("../models/Transaction");
 const Category = require("../models/Category");
 const authMiddleware = require("../middleware/auth");
+const { DEFAULT_CATEGORIES } = require("../utils/defaultCategories");
 
 router.get("/fetch-external", authMiddleware, async (req, res) => {
   try {
@@ -17,22 +18,27 @@ router.get("/fetch-external", authMiddleware, async (req, res) => {
     ];
 
     const defaultCategoryMap = {
-      "Netflix": "Entertainment",
+      "Netflix": "Loisirs",
       "Amazon": "Shopping",
       "Uber": "Transport",
-      "Starbucks": "Food & Drinks",
-      "Salary": "Income"
+      "Starbucks": "Alimentation",
+      "Salary": "Salaire"
     };
+
+    const categoryDefaultsByName = Object.fromEntries(
+      DEFAULT_CATEGORIES.map((category) => [category.name, category])
+    );
 
     const categoryDocs = await Promise.all(
       Object.values(defaultCategoryMap).map(async catName => {
         let cat = await Category.findOne({ name: catName, user: userId });
         if (!cat) {
+          const categoryDefaults = categoryDefaultsByName[catName];
           cat = new Category({ 
             name: catName, 
             user: userId,
-            type: catName === "Income" ? "income" : "expense",
-            color: "#60a5fa"
+            type: categoryDefaults?.type || "expense",
+            color: categoryDefaults?.color || "#60a5fa"
           });
           await cat.save();
         }

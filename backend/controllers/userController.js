@@ -1,6 +1,8 @@
 const User = require("../models/User");
 const Transaction = require("../models/Transaction");
 const Category = require("../models/Category");
+const bcrypt = require("bcryptjs");
+const { buildDefaultCategoriesForUser } = require("../utils/defaultCategories");
 
 exports.getProfile = async (req, res) => {
   const user = await User.findById(req.user.id).select("-password");
@@ -117,6 +119,59 @@ exports.getAdminDashboard = async (req, res) => {
       success: false,
       message: err.message
     });
+  }
+};
+
+exports.createUser = async (req, res) => {
+  try {
+    const {
+      firstName = "",
+      lastName = "",
+      email = "",
+      password = "",
+      role = "user"
+    } = req.body;
+
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (!["user", "editor"].includes(role)) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingUser = await User.findOne({ email: normalizedEmail });
+
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = new User({
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: normalizedEmail,
+      password: hashedPassword,
+      role
+    });
+
+    await user.save();
+    await Category.insertMany(buildDefaultCategoriesForUser(user._id));
+
+    res.status(201).json({
+      success: true,
+      data: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
